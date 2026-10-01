@@ -1,0 +1,22 @@
+steps:
+  - step_title: 1. Prepare temporary nnUNet input for the structural scan
+    step_command: mkdir -p {job_workdir}/tmp_nnunet && ln -sf {job_struct_path} {job_workdir}/tmp_nnunet/liver_{job_numeric_scan_id}_0000
+
+  - step_title: 2. Run nnUNet lesion segmentation
+    step_command: nnUNetv2_predict -i {job_workdir}/tmp_nnunet -o {job_workdir}/nnunet_out
+      # TODO: add additional nnUNet arguments once the final model configuration is finalized.
+
+  - step_title: 3. Rename nnUNet output to the required project naming
+    step_command: mv {job_workdir}/nnunet_out/liver_{job_numeric_scan_id}.nii.gz {job_workdir}/nnunet_out/liver_tumor_mask_{job_numeric_scan_id}.nii.gz
+
+  - step_title: 4. Create RTSTRUCT output directory
+    step_command: mkdir -p {job_workdir}/secondary
+
+  - step_title: 5. Convert the tumor mask to RTSTRUCT
+    step_command: python {g_pymipl_dir}/nifti2rtss.py {job_workdir}/nnunet_out/liver_tumor_mask_{job_numeric_scan_id}.nii.gz {job_struct_path} {job_workdir}/secondary/liver_tumor_mask_{job_numeric_scan_id}.dcm --structure_label LESION --series_number {job_numeric_scan_id}101 --series_description "LESION-mask-RTSTRUCT"
+
+  - step_title: 6. Upload outputs to the session resource
+    step_command: python {g_pymipl_dir}/xnat_workflow/sync-resource-with-xnat.py --level experiment --project {g_project} --subject {job_subject} --experiment {job_exp_label} --local_resource {job_workdir} --remote_resource LIVER-LESION_SEG_OUT --create_hierarchy 1
+
+  - step_title: 7. Upload scan-level RTSTRUCT resource
+    step_command: python {g_pymipl_dir}/xnat_workflow/sync-resource-with-xnat.py --level scan --project {g_project} --subject {job_subject} --experiment {job_exp_label} --scan {job_numeric_scan_id}101 --local_resource {job_workdir}/secondary --remote_resource secondary --create_hierarchy 1 --xsiType xnat:rtImageScanData --pullDataFromHeaders 1

@@ -1,0 +1,61 @@
+{
+  "name": "liver-lesion-seg",
+  "label": "Liver lesion segmentation",
+  "description": "Runs nnUNet lesion segmentation for CT scans and uploads RTSTRUCT results to XNAT.",
+  "version": "0.1",
+  "image": "mmilch01/liver-lesion-seg:latest",
+  "type": "docker",
+  "command-line": "python /opt/packages/user/runtime_repo/entrypoint.py --project #PROJECT# --session #EXPERIMENT# --host $XNAT_HOST --user $XNAT_USER --pass $XNAT_PASS",
+  "mounts": [
+    {
+      "name": "input",
+      "writable": false,
+      "path": "/input"
+    }
+  ],
+  "environment-variables": {},
+  "ports": {},
+  "inputs": [
+    {
+      "name": "PROJECT",
+      "type": "string",
+      "required": true,
+      "select-values": []
+    },
+    {
+      "name": "EXPERIMENT",
+      "type": "string",
+      "required": true,
+      "select-values": []
+    }
+  ],
+  "outputs": [],
+  "xnat": [
+    {
+      "name": "liver-lesion-seg",
+      "label": "Liver lesion segmentation",
+      "description": "Liver lesion segmentation",
+      "contexts": ["xnat:imageSessionData"],
+      "external-inputs": [
+        {
+          "name": "session",
+          "description": "Input session",
+          "type": "Session",
+          "required": true,
+          "provides-files-for-command-mount": "input",
+          "load-children": false
+        }
+      ],
+      "derived-inputs": [],
+      "output-handlers": []
+    }
+  ],
+  "reserve-memory": 16384,
+  "limit-cpu": 8,
+  "shm-size": 2147483648,
+  "container-labels": {},
+  "generic-resources": {},
+  "ulimits": {},
+  "secrets": [],
+  "visibility": "public"
+}
