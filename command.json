@@ -1,9 +1,9 @@
 {
-  "name": "liver-lesion-seg",
-  "label": "Liver lesion segmentation",
-  "description": "Runs nnUNet lesion segmentation for CT scans and uploads RTSTRUCT results to XNAT.",
+  "name": "abdominal-ct-segmentation",
+  "label": "Abdominal CT segmentation",
+  "description": "Runs abdominal CT segmentation and uploads RTSTRUCT results to XNAT.",
   "version": "0.1",
-  "image": "mmilch01/liver-lesion-seg:latest",
+  "image": "mmilch01/liver-lesion-seg:0.01",
   "type": "docker",
   "command-line": "python /opt/packages/user/runtime_repo/entrypoint.py --project #PROJECT# --session #EXPERIMENT# --host $XNAT_HOST --user $XNAT_USER --pass $XNAT_PASS",
   "mounts": [
@@ -17,7 +17,22 @@
   "ports": {},
   "inputs": [
     {
+      "name": "workflow_id",
+      "description": "XNAT-AI workflow ID",
+      "type": "string",
+      "default-value": "NONE",
+      "required": true,
+      "replacement-key": "#WORKFLOW_ID#",
+      "select-values": []
+    },
+    {
       "name": "PROJECT",
+      "type": "string",
+      "required": true,
+      "select-values": []
+    },
+    {
+      "name": "SUBJECT",
       "type": "string",
       "required": true,
       "select-values": []
@@ -32,9 +47,9 @@
   "outputs": [],
   "xnat": [
     {
-      "name": "liver-lesion-seg",
-      "label": "Liver lesion segmentation",
-      "description": "Liver lesion segmentation",
+      "name": "abdominal-ct-segmentation",
+      "label": "Abdominal CT segmentation",
+      "description": "Abdominal CT segmentation",
       "contexts": ["xnat:imageSessionData"],
       "external-inputs": [
         {
@@ -46,7 +61,50 @@
           "load-children": false
         }
       ],
-      "derived-inputs": [],
+      "derived-inputs": [
+        {
+          "name": "project",
+          "type": "Project",
+          "required": true,
+          "user-settable": false,
+          "load-children": false,
+          "derived-from-wrapper-input": "session",
+          "multiple": false
+        },
+        {
+          "name": "project-id",
+          "description": "Project id",
+          "type": "string",
+          "required": true,
+          "provides-value-for-command-input": "PROJECT",
+          "load-children": true,
+          "derived-from-wrapper-input": "session",
+          "derived-from-xnat-object-property": "project-id",
+          "multiple": false
+        },
+        {
+          "name": "subject-label",
+          "description": "subject label",
+          "type": "string",
+          "required": true,
+          "provides-value-for-command-input": "SUBJECT",
+          "load-children": true,
+          "derived-from-wrapper-input": "session",
+          "derived-from-xnat-object-property": "subject-id",
+          "multiple": false
+        },
+        {
+          "name": "session-label",
+          "description": "session label",
+          "type": "string",
+          "required": true,
+          "provides-value-for-command-input": "EXPERIMENT",
+          "load-children": true,
+          "derived-from-wrapper-input": "session",
+          "derived-from-xnat-object-property": "label",
+          "multiple": false
+        }
+      ],
       "output-handlers": []
     }
   ],

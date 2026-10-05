@@ -89,12 +89,21 @@ def main():
             d = json.load(file)
 
     subjects, scans = reindex_to_structurals_and_segs(d, xnat_structure_file, scanlist_file)
-    print(f"Number of structural scans: {len(scans)}")
+
+    #Filter out scans with no existing segmentations
+    scans = [
+        scan for scan in scans
+        if any(
+            key.startswith("SegScan") and value not in (None, "", "NA")
+            for key, value in scan.items()
+        )
+    ]
+    print(f"Number of structural scans with existing segmentations: {len(scans)}")
 
     if len(scans) == 0:
-        raise ValueError("No structural scans found in the project.")
+        raise ValueError("No structural scans with existing Seg/RTStruct segmentations found in the project.")
 
-    workflow_id = "LIVER-LESION_SEG_OUT"
+    workflow_id = "ABDOMINAL_CT_SEGMENTATION"
     user_env_repo = "/opt/packages/user/env_repo"
     user_src_repo = "/opt/packages/user/alg_repo"
 

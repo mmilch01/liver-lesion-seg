@@ -1,22 +1,21 @@
 steps:
-  - step_title: 1. Prepare temporary nnUNet input for the structural scan
-    step_command: mkdir -p {job_workdir}/tmp_nnunet && ln -sf {job_struct_path} {job_workdir}/tmp_nnunet/liver_{job_numeric_scan_id}_0000
+  - step_title: 1. Make input and output folders
+    step_command: mkdir -p {job_workdir}/scan{job_scan_id}/nnunet_input {job_workdir}/scan{job_scan_id}/nnunet_output {job_workdir}/scan{job_scan_id}/secondary
 
-  - step_title: 2. Run nnUNet lesion segmentation
-    step_command: nnUNetv2_predict -i {job_workdir}/tmp_nnunet -o {job_workdir}/nnunet_out
-      # TODO: add additional nnUNet arguments once the final model configuration is finalized.
+  - step_title: 2. Convert structural scan to NIFTI
+    step_command: micromamba run -n base python {g_pymipl_dir}/test_rt-utils.py {job_struct_path} {job_workdir}/scan{job_scan_id}/nnunet_input/ct_struct_0000
 
-  - step_title: 3. Rename nnUNet output to the required project naming
-    step_command: mv {job_workdir}/nnunet_out/liver_{job_numeric_scan_id}.nii.gz {job_workdir}/nnunet_out/liver_tumor_mask_{job_numeric_scan_id}.nii.gz
+  - step_title: 3. Rename output to fit nnunet input conventions
+    step_command: mv {job_workdir}/scan{job_scan_id}/nnunet_input/ct_struct_0000_struct.nii.gz {job_workdir}/scan{job_scan_id}/nnunet_input/ct_struct_0000.nii.gz
 
-  - step_title: 4. Create RTSTRUCT output directory
-    step_command: mkdir -p {job_workdir}/secondary
+  - step_title: 4. nnUNet lesion segmentation
+    step_command: micromamba run -p {g_env_repo_dir} nnUNetv2_predict -i {job_workdir}/scan{job_scan_id}/nnunet_input -o {job_workdir}/scan{job_scan_id}/nnunet_output -d Dataset006_Liver -c 3d_fullres -device cpu
 
   - step_title: 5. Convert the tumor mask to RTSTRUCT
-    step_command: python {g_pymipl_dir}/nifti2rtss.py {job_workdir}/nnunet_out/liver_tumor_mask_{job_numeric_scan_id}.nii.gz {job_struct_path} {job_workdir}/secondary/liver_tumor_mask_{job_numeric_scan_id}.dcm --structure_label LESION --series_number {job_numeric_scan_id}101 --series_description "LESION-mask-RTSTRUCT"
+    step_command: micromamba run -n base python {g_pymipl_dir}/nifti2rtss.py --structure_labels Spleen,Kidneys,Pancreas,Stomach,Heart,Duodenum,Lung,Liver,Tumor --segmentation_intensities 1,2,3,4,5,6,7,8,9 --structure_set_label Multi-organ --series_description "Multi-organ abdominal CT segmentation" --series_number {job_numeric_scan_id}102 {job_workdir}/scan{job_scan_id}/nnunet_output/ct_struct.nii.gz {job_struct_path} {job_workdir}/scan{job_scan_id}/secondary/abdominal_ct_segmentation.dcm
 
-  - step_title: 6. Upload outputs to the session resource
-    step_command: python {g_pymipl_dir}/xnat_workflow/sync-resource-with-xnat.py --level experiment --project {g_project} --subject {job_subject} --experiment {job_exp_label} --local_resource {job_workdir} --remote_resource LIVER-LESION_SEG_OUT --create_hierarchy 1
+  - step_title: 6. Upload scan-level RTSTRUCT resource
+    step_command: micromamba run -n base python {g_pymipl_dir}/xnat_workflow/sync-resource-with-xnat.py --level scan --project {g_project} --subject {job_subject} --experiment {job_exp_label} --scan {job_numeric_scan_id}102 --local_resource {job_workdir}/scan{job_scan_id}/secondary --remote_resource secondary --create_hierarchy 1 --xsiType xnat:rtImageScanData --pullDataFromHeaders 1
 
-  - step_title: 7. Upload scan-level RTSTRUCT resource
-    step_command: python {g_pymipl_dir}/xnat_workflow/sync-resource-with-xnat.py --level scan --project {g_project} --subject {job_subject} --experiment {job_exp_label} --scan {job_numeric_scan_id}101 --local_resource {job_workdir}/secondary --remote_resource secondary --create_hierarchy 1 --xsiType xnat:rtImageScanData --pullDataFromHeaders 1
+  - step_title: 7. Upload outputs to the session resource
+    step_command: micromamba run -n base python {g_pymipl_dir}/xnat_workflow/sync-resource-with-xnat.py --level experiment --project {g_project} --subject {job_subject} --experiment {job_exp_label} --local_resource {job_workdir} --remote_resource {g_workflow_id} --create_hierarchy 1
